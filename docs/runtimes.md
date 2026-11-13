@@ -1,6 +1,6 @@
 # 选择和配置底座
 
-在[快速开始](../README.md#用-openclaw-发出第一条消息)连接 OpenClaw，或按下文连接 dsh、Pi。各底座需先配置自己的模型和凭据。
+在[快速开始](README.zh-CN.md#用-openclaw-发出第一条消息)连接 OpenClaw，或按下文连接 dsh、Pi。各底座需先配置自己的模型和凭据。
 
 ## OpenClaw HTTP/SSE
 

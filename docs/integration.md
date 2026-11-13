@@ -6,7 +6,7 @@ Open Push Channel 网关可作为独立 WebSocket 服务运行。业务页面用
 
 ## 为业务系统配置认证
 
-在网关的 JSON 配置文件中声明允许连接的客户端及其目标。将以下内容保存为 `admin-backend/gateway.config.local.json`。本例假定 OpenClaw 插件与网关同机运行，OpenClaw 的 `channels.push-channel.middlewareUrl` 指向 `http://127.0.0.1:3001`。插件安装见[快速开始](../README.md#用-openclaw-发出第一条消息)。
+在网关的 JSON 配置文件中声明允许连接的客户端及其目标。将以下内容保存为 `admin-backend/gateway.config.local.json`。本例假定 OpenClaw 插件与网关同机运行，OpenClaw 的 `channels.push-channel.middlewareUrl` 指向 `http://127.0.0.1:3001`。插件安装见[快速开始](README.zh-CN.md#用-openclaw-发出第一条消息)。
 
 ```json
 {

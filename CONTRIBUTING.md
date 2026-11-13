@@ -45,7 +45,7 @@ node --test frontend-demo/sdk.test.js
 2. 按 [Adapter 契约](protocol/index.d.cts) 在 `admin-backend/src/adapters/` 接入，并通过 `runtime-config.js` 装配服务端配置。宿主支持原生插件时，可以复用 `plugins/client.cjs` 连接网关。
 3. 声明实际支持的能力，使用统一事件区分消息增量、快照、工具及子智能体。适配器负责原生结果；网关负责 `run.*` 与输入确认。
 4. 为成功、明确拒绝、终态缺失、重复请求、过期运行与连接中断提供行为测试。输入控制需要验证目标运行、重复提交、接收结果未知及队列处理。
-5. 更新[能力表](README.md#连接其他底座)和[底座配置](docs/runtimes.md)。协议行为变更同步校验、类型、SDK 和示例。
+5. 更新[能力表](docs/README.zh-CN.md#连接其他底座)和[底座配置](docs/runtimes.md)。协议行为变更同步校验、类型、SDK 和示例。
 
 `run()` 应等待原生执行周期结束。`onAccepted()` 表示底座已接收或接收结果未知；明确拒绝时不调用。用 `emit()` 发送 `AdapterSignal`，避免重复生成运行终态。凭据、工具权限和工作目录从可信宿主或部署配置加载。
 
