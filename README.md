@@ -1,6 +1,12 @@
 # Open Push Channel
 
+[简体中文](README.md) · [English](README.en.md)
+
+![Open Push Channel — WebSocket gateway for AI agents](assets/brand/banner.png)
+
 独立部署的 WebSocket 消息网关，用同一套接口把 OpenClaw、DeepSeek Harness 和 Pi 接入自己的网页或业务系统。业务页面发消息并实时展示回复、工具和子智能体进度，业务后端可以触发任务或推送通知。
+
+An independently deployable WebSocket gateway that connects OpenClaw, DeepSeek Harness, and Pi to your web apps and business systems. Stream replies and progress to the browser, and trigger tasks or push notifications from your backend.
 
 例如，给已有的工单页面加一个智能体面板。客服在工单里发送问题，页面通过 WebSocket 显示回复。工单状态变化后，后端可以让智能体补充摘要，或把已有结果推回原会话。用户离开页面后，已保存的事件可以在重新订阅时回放。
 
