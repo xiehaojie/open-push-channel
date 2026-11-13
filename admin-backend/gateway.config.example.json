@@ -1,0 +1,9 @@
+{
+  "dataRoot": "runtime-data",
+  "databasePath": "runtime-data/push-gateway/gateway.sqlite",
+  "runtimes": [
+    { "id": "openclaw", "type": "openclaw", "url": "http://127.0.0.1:3002/webhook" },
+    { "id": "deepseek-harness", "type": "deepseek-harness", "command": "dsh", "agents": ["main", "researcher"], "provider": "deepseek-official", "model": "deepseek-v4-flash" },
+    { "id": "pi", "type": "pi", "command": "pi", "agents": ["main", "coder"] }
+  ]
+}

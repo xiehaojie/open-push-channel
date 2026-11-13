@@ -1,0 +1,151 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22.19.0", "24"]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            admin-backend/package-lock.json
+      - run: npm ci
+      - run: npm --prefix admin-backend ci
+      - run: npm test
+      - name: Pack and install the plugin
+        shell: bash
+        run: |
+          npm pack --json --pack-destination "$RUNNER_TEMP" > "$RUNNER_TEMP/pack.json"
+          node --input-type=commonjs - "$RUNNER_TEMP/pack.json" <<'NODE'
+          const assert = require("node:assert/strict");
+          const { readFileSync } = require("node:fs");
+          const [artifact] = JSON.parse(readFileSync(process.argv[2], "utf8"));
+          const files = new Set(artifact.files.map(({ path }) => path));
+          for (const file of [
+            "LICENSE",
+            "openclaw.plugin.json",
+            "dist/index.js",
+            "dist/src/channel.js",
+            "dist/src/runtime.js",
+            "plugins/dsh/index.mjs",
+            "protocol/plugin.cjs",
+          ]) assert.ok(files.has(file), `Missing package file ${file}`);
+          const allowed = /^(?:package\.json|LICENSE|README\.md|CONTRIBUTING\.md|index\.ts|openclaw\.plugin\.json|dist\/.+\.js|src\/.+\.ts|plugins\/client\.cjs|plugins\/dsh\/index\.mjs|protocol\/.+\.(?:cjs|d\.cts))$/;
+          for (const file of files) {
+            assert.ok(allowed.test(file) && !/\.test\.[^/]+$/.test(file), `Unexpected package file ${file}`);
+          }
+          NODE
+          tarball="$(node --input-type=commonjs -p 'require(process.argv[1])[0].filename' "$RUNNER_TEMP/pack.json")"
+          mkdir "$RUNNER_TEMP/plugin-install"
+          cd "$RUNNER_TEMP/plugin-install"
+          npm install --ignore-scripts --no-audit --no-fund "$RUNNER_TEMP/$tarball"
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { apply } from "open-push-channel/dsh";
+          assert.equal(typeof apply, "function");
+          assert.match(import.meta.resolve("open-push-channel"), /\/dist\/index\.js$/);
+          NODE
+
+  openclaw-plugin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+      - run: npm ci
+      - name: Load the packaged plugin in OpenClaw
+        shell: bash
+        run: |
+          npm pack --pack-destination "$RUNNER_TEMP"
+          host="$RUNNER_TEMP/openclaw-host"
+          mkdir "$host"
+          cd "$host"
+          npm install --no-save --package-lock=false --no-audit --no-fund openclaw@2026.5.28
+          openclaw="$host/node_modules/openclaw/openclaw.mjs"
+          export OPENCLAW_STATE_DIR="$host/state"
+          export OPENCLAW_CONFIG_PATH="$host/openclaw.json"
+          export OPENCLAW_DISABLE_BUNDLED_PLUGINS=1
+          export PUSH_CHANNEL_WEBHOOK_TOKEN="$(openssl rand -hex 20)"
+          node "$openclaw" plugins install "npm-pack:$RUNNER_TEMP/open-push-channel-0.1.0.tgz"
+          node --input-type=commonjs <<'NODE'
+          const fs = require("node:fs");
+          const file = process.env.OPENCLAW_CONFIG_PATH;
+          const config = JSON.parse(fs.readFileSync(file, "utf8"));
+          config.gateway = { mode: "local", bind: "loopback", port: 19089, auth: { mode: "none" } };
+          config.plugins.allow = ["push-channel"];
+          config.channels = {
+            "push-channel": { enabled: true, listenPort: 19002, middlewareUrl: "http://127.0.0.1:1" },
+          };
+          fs.writeFileSync(file, JSON.stringify(config));
+          NODE
+          node "$openclaw" plugins info push-channel --json | node --input-type=commonjs -e '
+            const assert = require("node:assert/strict");
+            const fs = require("node:fs");
+            const { plugin } = JSON.parse(fs.readFileSync(0, "utf8"));
+            assert.equal(plugin.status, "loaded");
+            assert.match(plugin.source, /\/dist\/index\.js$/);
+          '
+          node "$openclaw" gateway run > "$host/gateway.log" 2>&1 &
+          gateway_pid=$!
+          trap 'status=$?; kill "$gateway_pid" 2>/dev/null || true; wait "$gateway_pid" || true; if [ "$status" -ne 0 ]; then tail -60 "$host/gateway.log"; fi' EXIT
+          webhook="http://127.0.0.1:19002/webhook"
+          status="$(curl --silent --show-error --max-time 3 --retry 30 --retry-delay 1 --retry-connrefused -o /dev/null -w '%{http_code}' "$webhook")"
+          test "$status" = 404
+          status="$(curl --silent --show-error --max-time 3 -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d '{}' "$webhook")"
+          test "$status" = 401
+          wrong_token="x${PUSH_CHANNEL_WEBHOOK_TOKEN:1}"
+          status="$(curl --silent --show-error --max-time 3 -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -H "Authorization: Bearer $wrong_token" -d '{}' "$webhook")"
+          test "$status" = 401
+          status="$(curl --silent --show-error --max-time 3 -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -H "Authorization: Bearer $PUSH_CHANNEL_WEBHOOK_TOKEN" -d '{}' "$webhook")"
+          test "$status" = 400
+          status="$(curl --silent --show-error --max-time 3 -o /dev/null -w '%{http_code}' -H 'Content-Type: text/plain' -H "Authorization: Bearer $PUSH_CHANNEL_WEBHOOK_TOKEN" -d '{}' "$webhook")"
+          test "$status" = 415
+
+  gateway-container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Build and smoke-test the gateway image
+        shell: bash
+        run: |
+          docker build -f deploy/gateway/Dockerfile -t open-push-channel-gateway:ci .
+          export PUSH_GATEWAY_CLIENT_TOKEN="$(openssl rand -hex 20)"
+          export PUSH_CHANNEL_PUSH_TOKEN="$(openssl rand -hex 20)"
+          export PUSH_CHANNEL_WEBHOOK_TOKEN="$(openssl rand -hex 20)"
+          container="$(docker run --detach --rm -p 127.0.0.1::3003 \
+            --mount "type=bind,source=$PWD/deploy/gateway/gateway.example.json,target=/etc/open-push-channel/gateway.json,readonly" \
+            -e PUSH_GATEWAY_CLIENT_TOKEN \
+            -e PUSH_CHANNEL_PUSH_TOKEN \
+            -e PUSH_CHANNEL_WEBHOOK_TOKEN \
+            open-push-channel-gateway:ci)"
+          trap 'docker stop "$container" >/dev/null' EXIT
+          endpoint="http://$(docker port "$container" 3003/tcp)"
+          curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 1 "$endpoint/healthz"
+          curl --fail --silent --show-error -o /dev/null "$endpoint/demo/"
+          status="$(curl --silent --show-error -o /dev/null -w '%{http_code}' "$endpoint/api/runtimes")"
+          test "$status" = 401
+          curl --fail --silent --show-error -H "Authorization: Bearer $PUSH_CHANNEL_PUSH_TOKEN" "$endpoint/api/runtimes"

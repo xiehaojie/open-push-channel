@@ -1,0 +1,16 @@
+{
+  "databasePath": "state/push-gateway.sqlite",
+  "runtimes": [
+    { "id": "openclaw", "type": "openclaw", "url": "http://127.0.0.1:3002/webhook" }
+  ],
+  "auth": {
+    "clients": [
+      {
+        "id": "demo",
+        "tokenEnv": "PUSH_GATEWAY_CLIENT_TOKEN",
+        "targets": [{ "runtimeId": "openclaw", "agentId": "main" }]
+      }
+    ],
+    "pushTokenEnv": "PUSH_CHANNEL_PUSH_TOKEN"
+  }
+}

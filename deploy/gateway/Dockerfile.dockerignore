@@ -1,0 +1,15 @@
+**
+!admin-backend/
+!admin-backend/package.json
+!admin-backend/package-lock.json
+!admin-backend/src/
+!admin-backend/src/**
+admin-backend/src/**/*.test.js
+!protocol/
+!protocol/index.cjs
+!protocol/plugin.cjs
+!frontend-demo/
+!frontend-demo/index.html
+!frontend-demo/sdk.js
+!frontend-demo/mentions.js
+!frontend-demo/style.css

@@ -1,0 +1,14 @@
+# Copy to the private per-user Secret key dsh-profile.yml.
+# Replace the endpoint, model ID and capacity with your provider's contract.
+- id: llm-pi-ai
+  config:
+    providers:
+      custom:
+        apiKeyEnv: PUSH_MODEL_API_KEY
+        api: openai-completions
+        baseURL: https://model.example.com/v1
+        models:
+          - id: your-model
+            name: Custom model
+            contextWindow: 32768
+            maxTokens: 4096

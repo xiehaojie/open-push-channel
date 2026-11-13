@@ -1,0 +1,32 @@
+{
+  "databasePath": "state/push-gateway.sqlite",
+  "runtimes": [
+    {
+      "id": "dsh",
+      "type": "plugin",
+      "agents": ["main"],
+      "tokenEnv": "PUSH_DSH_PLUGIN_TOKEN",
+      "capabilities": {
+        "streaming": true,
+        "tools": true,
+        "reasoning": true,
+        "subagents": true,
+        "cancel": false,
+        "mentions": false,
+        "sessionRestore": true,
+        "steering": true,
+        "followUp": true
+      }
+    }
+  ],
+  "auth": {
+    "clients": [
+      {
+        "id": "demo-client",
+        "tokenEnv": "PUSH_DEMO_CLIENT_TOKEN",
+        "targets": [{ "runtimeId": "dsh", "agentId": "main" }]
+      }
+    ],
+    "pushTokenEnv": "PUSH_CHANNEL_PUSH_TOKEN"
+  }
+}

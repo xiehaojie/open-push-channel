@@ -1,0 +1,50 @@
+{
+  "id": "push-channel",
+  "name": "Push Channel",
+  "description": "Custom push channel with middleware.",
+  "activation": {
+    "onStartup": false
+  },
+  "channels": ["push-channel"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "channelConfigs": {
+    "push-channel": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "middlewareUrl": { "type": "string" },
+          "listenHost": { "type": "string" },
+          "listenPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
+          "listenPath": { "type": "string" }
+        }
+      },
+      "uiHints": {
+        "middlewareUrl": {
+          "label": "Middleware URL",
+          "placeholder": "http://localhost:3001"
+        },
+        "listenHost": {
+          "label": "Listen host",
+          "placeholder": "127.0.0.1",
+          "help": "Non-loopback listeners require PUSH_CHANNEL_WEBHOOK_TOKEN."
+        },
+        "listenPort": {
+          "label": "Listen port",
+          "placeholder": "3002"
+        },
+        "listenPath": {
+          "label": "Listen path",
+          "placeholder": "/webhook"
+        }
+      },
+      "label": "Push Channel",
+      "description": "Custom push channel with middleware."
+    }
+  }
+}

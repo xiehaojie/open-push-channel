@@ -1,0 +1,27 @@
+{
+  "name": "open-push-channel-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open Push Channel gateway and browser demo",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "scripts": {
+    "start": "node src/gateway/server.js",
+    "start:gateway": "node src/gateway/server.js",
+    "test": "node --test"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "jsdom": "29.1.1"
+  },
+  "dependencies": {
+    "@koa/cors": "^5.0.0",
+    "dotenv": "^17.3.1",
+    "koa": "^3.2.1",
+    "koa-bodyparser": "^4.4.1",
+    "kysely": "0.29.2",
+    "node-fetch": "^2.7.0",
+    "ws": "^8.19.0"
+  }
+}
