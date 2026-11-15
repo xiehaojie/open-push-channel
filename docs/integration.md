@@ -4,6 +4,8 @@ Open Push Channel 网关可作为独立 WebSocket 服务运行。业务页面用
 
 以工单系统为例。工单页创建一个绑定到实际智能体的会话，用户在页面发送问题。业务后端在收到状态变更事件后，用工单会话 ID 发起摘要任务，页面通过同一条 WebSocket 接收运行事件。若后端已生成摘要，可以直接推送结果。
 
+Go 后端可直接运行[标准库示例](../examples/go-backend/README.md)，用同一套 HTTP 接口启动任务或投递通知。
+
 ## 为业务系统配置认证
 
 在网关的 JSON 配置文件中声明允许连接的客户端及其目标。将以下内容保存为 `admin-backend/gateway.config.local.json`。本例假定 OpenClaw 插件与网关同机运行，OpenClaw 的 `channels.push-channel.middlewareUrl` 指向 `http://127.0.0.1:3001`。插件安装见[快速开始](README.zh-CN.md#用-openclaw-发出第一条消息)。
