@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ["22.19.0", "24"]
+        node: ["22.19.0", "24.0.0", "24"]
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -28,6 +28,7 @@ jobs:
             admin-backend/package-lock.json
       - run: npm ci
       - run: npm --prefix admin-backend ci
+      - run: npm run typecheck
       - run: npm test
       - name: Pack and install the plugin
         shell: bash
@@ -44,10 +45,9 @@ jobs:
             "dist/index.js",
             "dist/src/channel.js",
             "dist/src/runtime.js",
-            "plugins/dsh/index.mjs",
-            "protocol/plugin.cjs",
+            "dist/plugins/dsh/index.mjs",
           ]) assert.ok(files.has(file), `Missing package file ${file}`);
-          const allowed = /^(?:package\.json|LICENSE|README\.md|CONTRIBUTING\.md|index\.ts|openclaw\.plugin\.json|dist\/.+\.js|src\/.+\.ts|plugins\/client\.cjs|plugins\/dsh\/index\.mjs|protocol\/.+\.(?:cjs|d\.cts))$/;
+          const allowed = /^(?:package\.json|LICENSE|README\.md|CONTRIBUTING\.md|index\.ts|openclaw\.plugin\.json|dist\/.+\.(?:js|mjs)|src\/.+\.ts)$/;
           for (const file of files) {
             assert.ok(allowed.test(file) && !/\.test\.[^/]+$/.test(file), `Unexpected package file ${file}`);
           }
@@ -77,7 +77,7 @@ jobs:
       - name: Load the packaged plugin in OpenClaw
         shell: bash
         run: |
-          npm pack --pack-destination "$RUNNER_TEMP"
+          tarball="$(npm pack --silent --pack-destination "$RUNNER_TEMP")"
           host="$RUNNER_TEMP/openclaw-host"
           mkdir "$host"
           cd "$host"
@@ -87,7 +87,7 @@ jobs:
           export OPENCLAW_CONFIG_PATH="$host/openclaw.json"
           export OPENCLAW_DISABLE_BUNDLED_PLUGINS=1
           export PUSH_CHANNEL_WEBHOOK_TOKEN="$(openssl rand -hex 20)"
-          node "$openclaw" plugins install "npm-pack:$RUNNER_TEMP/open-push-channel-0.1.0.tgz"
+          node "$openclaw" plugins install "npm-pack:$RUNNER_TEMP/$tarball"
           node --input-type=commonjs <<'NODE'
           const fs = require("node:fs");
           const file = process.env.OPENCLAW_CONFIG_PATH;
@@ -145,7 +145,9 @@ jobs:
           trap 'status=$?; if [ "$status" -ne 0 ]; then docker logs "$container" || true; fi; docker rm -f "$container" >/dev/null' EXIT
           endpoint="http://$(docker port "$container" 3003/tcp)"
           curl --fail --silent --show-error --max-time 3 --retry 10 --retry-all-errors --retry-delay 1 "$endpoint/healthz"
-          curl --fail --silent --show-error --max-time 3 -o /dev/null "$endpoint/demo/"
+          for asset in "" sdk.js mentions.js demo.js style.css; do
+            curl --fail --silent --show-error --max-time 3 -o /dev/null "$endpoint/demo/$asset"
+          done
           status="$(curl --silent --show-error --max-time 3 -o /dev/null -w '%{http_code}' "$endpoint/api/runtimes")"
           test "$status" = 401
           curl --fail --silent --show-error --max-time 3 -H "Authorization: Bearer $PUSH_CHANNEL_PUSH_TOKEN" "$endpoint/api/runtimes"

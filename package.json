@@ -1,6 +1,6 @@
 {
   "name": "open-push-channel",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Connect OpenClaw, DeepSeek Harness, and Pi to web apps through a shared gateway protocol.",
   "license": "MIT",
   "repository": {
@@ -14,27 +14,34 @@
   "type": "module",
   "exports": {
     ".": "./dist/index.js",
-    "./dsh": "./plugins/dsh/index.mjs"
+    "./dsh": "./dist/plugins/dsh/index.mjs"
   },
   "files": [
     "dist/**/*.js",
+    "dist/plugins/dsh/index.mjs",
     "index.ts",
     "openclaw.plugin.json",
     "src/**/*.ts",
     "!src/**/*.test.ts",
-    "plugins/client.cjs",
-    "plugins/dsh/index.mjs",
-    "protocol/*.cjs",
-    "protocol/*.d.cts",
     "CONTRIBUTING.md"
   ],
   "scripts": {
-    "build": "node scripts/build.mjs",
-    "prepack": "npm run build",
-    "test": "node --test admin-backend/src/**/*.test.js frontend-demo/*.test.js plugins/client.test.cjs plugins/dsh/index.test.cjs deploy/runtime-runner/bootstrap.test.cjs"
+    "build": "node scripts/build.ts && npm run build:demo",
+    "build:demo": "node frontend-demo/build.ts",
+    "prepack": "node scripts/build.ts",
+    "typecheck": "tsc -p tsconfig.standalone.json",
+    "pretest": "npm run build:demo",
+    "test": "node --test \"admin-backend/src/**/*.test.cts\" \"frontend-demo/*.test.ts\" \"plugins/**/*.test.cts\" \"deploy/runtime-runner/*.test.cts\""
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "@types/koa": "3.0.3",
+    "@types/koa__cors": "5.0.1",
+    "@types/koa-bodyparser": "4.3.13",
+    "@types/node": "22.20.5",
+    "@types/node-fetch": "2.6.13",
+    "@types/ws": "8.18.2",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3"
   },
   "openclaw": {
     "extensions": [

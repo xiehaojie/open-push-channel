@@ -69,7 +69,7 @@ client.followUp("完成后补充测试说明", { sessionId, runId });
 | 工具     | `tool.started`、`tool.completed`；`activity.started/completed` 表示现有工具阶段指示                           |
 | 子智能体 | `subagent.started/message/delta/result/failed/ended`、`subagent.tool.started/completed`                       |
 
-完整载荷字段见 [TypeScript 契约](../protocol/index.d.cts)。消息增量与快照明确区分，网关不根据文本长度或前缀猜测快照。
+完整载荷字段见 [TypeScript 契约](../protocol/index.ts)。消息增量与快照明确区分，网关不根据文本长度或前缀猜测快照。
 
 ## 运行与子智能体
 

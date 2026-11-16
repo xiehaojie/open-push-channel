@@ -73,7 +73,7 @@ OpenClaw 主动推送到此容器时，将其 `middlewareUrl` 指向 `http://127
 本机可只验证配置和初始化，不启动服务：
 
 ```sh
-node deploy/runtime-runner/bootstrap.cjs --config /etc/push-gateway/gateway.json --prepare-only
+node deploy/runtime-runner/bootstrap.ts --config /etc/push-gateway/gateway.json --prepare-only
 ```
 
 入口只接受 `--config <文件>` 和 `--prepare-only`，固定启动网关脚本，不接受脚本位置参数。镜像 CMD 和 Kubernetes 容器 `args` 均只传入口参数，例如 `["--config", "/etc/push-gateway/gateway.json"]`。省略 `--config` 时使用 `/etc/push-gateway/gateway.json`；该文件必须已挂载。

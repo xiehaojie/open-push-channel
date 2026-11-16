@@ -165,7 +165,7 @@ curl --fail-with-body http://127.0.0.1:3001/api/send \
 
 `/api/send` 向会话投递通知，`/api/tasks` 调用智能体执行。通知返回 HTTP 200 表示网关接受了消息，浏览器收到的事件带 `origin: "push"`。同一个通知 ID 可以安全地重试相同正文。按会话发送时，消息可在离线用户重新订阅后回放。
 
-通知载荷除了 `content`，还支持协议 [AdapterSignal](../protocol/index.d.cts) 对应的 `signal`，或 OpenClaw 旧事件格式的 `event`。三者只能提供一种。始终给业务通知带上明确的 `clientId`、`sessionId` 和 `agentId`，避免按智能体向所有在线客户端广播。
+通知载荷除了 `content`，还支持协议 [AdapterSignal](../protocol/index.ts) 对应的 `signal`，或 OpenClaw 旧事件格式的 `event`。三者只能提供一种。始终给业务通知带上明确的 `clientId`、`sessionId` 和 `agentId`，避免按智能体向所有在线客户端广播。
 
 ## 重连、去重和部署边界
 

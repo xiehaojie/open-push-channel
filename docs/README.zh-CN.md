@@ -46,7 +46,7 @@ git clone https://github.com/xiehaojie/open-push-channel.git
 cd open-push-channel
 npm ci
 npm pack
-openclaw plugins install "npm-pack:$PWD/open-push-channel-0.1.0.tgz"
+openclaw plugins install "npm-pack:$PWD/open-push-channel-0.2.0.tgz"
 openclaw plugins enable push-channel
 openclaw config set channels.push-channel.enabled true
 openclaw config set channels.push-channel.middlewareUrl http://127.0.0.1:3001

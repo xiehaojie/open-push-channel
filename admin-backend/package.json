@@ -1,15 +1,18 @@
 {
   "name": "open-push-channel-gateway",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Open Push Channel gateway and browser demo",
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
   },
   "scripts": {
-    "start": "node src/gateway/server.js",
-    "start:gateway": "node src/gateway/server.js",
-    "test": "node --test"
+    "prestart": "node ../frontend-demo/build.ts",
+    "start": "node src/gateway/server.ts",
+    "start:gateway": "node src/gateway/server.ts",
+    "pretest": "node ../frontend-demo/build.ts",
+    "test": "node --test \"src/**/*.test.cts\"",
+    "prestart:gateway": "node ../frontend-demo/build.ts"
   },
   "license": "MIT",
   "devDependencies": {
@@ -23,5 +26,6 @@
     "kysely": "0.29.2",
     "node-fetch": "^2.7.0",
     "ws": "^8.19.0"
-  }
+  },
+  "type": "module"
 }

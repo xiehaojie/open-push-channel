@@ -10,7 +10,7 @@
 | `admin-backend/src/gateway/`、`admin-backend/src/websocket/` | 会话绑定、运行队列、SQLite、认证与事件投递 |
 | `admin-backend/src/adapters/` | OpenClaw HTTP/SSE、dsh SDK、Pi RPC 和通用原生插件传输 |
 | `index.ts`、`src/` | OpenClaw 插件与公开 SDK 接入 |
-| `plugins/dsh/`、`plugins/client.cjs` | dsh 原生插件与共享网关连接 |
+| `plugins/dsh/`、`plugins/client.ts` | dsh 原生插件与共享网关连接 |
 | `frontend-demo/` | 浏览器 SDK 与 Demo |
 | `deploy/gateway/`、`deploy/runtime-runner/` | 独立网关镜像与含 RPC 底座的可选镜像 |
 
@@ -23,16 +23,20 @@
 ```bash
 npm ci
 npm --prefix admin-backend ci
+npm run typecheck
 npm test
 npm pack
 ```
 
+`npm run build:demo` 将浏览器 SDK 和 Demo 编译到 `frontend-demo/dist/`。独立打开 Demo 时使用该目录下的 `index.html`。
+
 `npm test` 运行独立网关、协议、适配器、Demo 与运行容器启动器测试。可单独运行目标测试，例如：
 
 ```bash
-node --test admin-backend/src/adapters/pi.test.js
-node --test plugins/dsh/index.test.cjs
-node --test frontend-demo/sdk.test.js
+node --test admin-backend/src/adapters/pi.test.cts
+node --test plugins/dsh/index.test.cts
+npm run build:demo
+node --test frontend-demo/sdk.test.ts
 ```
 
 修改 OpenClaw 插件时，在独立测试配置中安装 `npm pack` 产物并启动对应宿主。用于测试的 OpenClaw 源码检出可将本项目放在 `extensions/push-channel` 下，安装宿主的开发依赖，再用宿主提供的测试入口执行 `index.test.ts` 和 `src/*.test.ts`。运行方式遵循该宿主检出的开发指南。
@@ -44,8 +48,8 @@ node --test frontend-demo/sdk.test.js
 安装上面的依赖后，从仓库根目录运行：
 
 ```bash
-node scripts/benchmark-push.cjs 100 20
-node scripts/benchmark-push.cjs 50 20 20000
+node scripts/benchmark-push.ts 100 20
+node scripts/benchmark-push.ts 50 20 20000
 ```
 
 参数分别是 WebSocket 连接数、测量轮数和预置的离线会话数，默认 25、10 和 0。脚本启动一个隔离的本机网关，使用临时 SQLite 文件。每个连接以独立客户端身份注册、创建会话，预热一轮后，每轮并发调用 `POST /api/send`，并核对收到通知的会话和正文。输出每秒成功投递数，以及从发起 HTTP 请求到收到 WebSocket 正文事件的 p50、p95、p99 延迟。失败或超时会返回非零退出码。
@@ -55,7 +59,7 @@ node scripts/benchmark-push.cjs 50 20 20000
 ## 接入新底座
 
 1. 阅读目标宿主的公开接口，确认消息接收、会话恢复、运行完成及取消契约。
-2. 按 [Adapter 契约](protocol/index.d.cts) 在 `admin-backend/src/adapters/` 接入，并通过 `runtime-config.js` 装配服务端配置。宿主支持原生插件时，可以复用 `plugins/client.cjs` 连接网关。
+2. 按 [Adapter 契约](protocol/index.ts) 在 `admin-backend/src/adapters/` 接入，并通过 `runtime-config.ts` 装配服务端配置。宿主支持原生插件时，可以复用 `plugins/client.ts` 连接网关。
 3. 声明实际支持的能力，使用统一事件区分消息增量、快照、工具及子智能体。适配器负责原生结果；网关负责 `run.*` 与输入确认。
 4. 为成功、明确拒绝、终态缺失、重复请求、过期运行与连接中断提供行为测试。输入控制需要验证目标运行、重复提交、接收结果未知及队列处理。
 5. 更新[能力表](docs/README.zh-CN.md#连接其他底座)和[底座配置](docs/runtimes.md)。协议行为变更同步校验、类型、SDK 和示例。

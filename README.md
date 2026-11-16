@@ -25,7 +25,7 @@ Start the gateway and connect one runtime. Open the included Demo, start a conve
 
 ## Quick start
 
-You need Node.js 22.19+ on the 22.x line or Node.js 24+, and a supported runtime with a working model configuration. For OpenClaw, use the compiled plugin archive from the [v0.1.0 release](https://github.com/xiehaojie/open-push-channel/releases/tag/v0.1.0), or build it with `npm ci` and `npm pack` in the project root.
+You need Node.js 22.19+ on the 22.x line or Node.js 24+, and a supported runtime with a working model configuration. For OpenClaw, use the compiled plugin archive from the [v0.2.0 release](https://github.com/xiehaojie/open-push-channel/releases/tag/v0.2.0), or build it with `npm ci` and `npm pack` in the project root.
 
 From a terminal, clone the repository and configure the OpenClaw plugin:
 
@@ -34,7 +34,7 @@ git clone https://github.com/xiehaojie/open-push-channel.git
 cd open-push-channel
 npm ci
 npm pack
-openclaw plugins install "npm-pack:$PWD/open-push-channel-0.1.0.tgz"
+openclaw plugins install "npm-pack:$PWD/open-push-channel-0.2.0.tgz"
 openclaw plugins enable push-channel
 openclaw config set channels.push-channel.enabled true
 openclaw config set channels.push-channel.middlewareUrl http://127.0.0.1:3001

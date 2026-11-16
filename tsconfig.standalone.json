@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "erasableSyntaxOnly": true,
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": [
+    "admin-backend/src/**/*.ts",
+    "frontend-demo/*.ts",
+    "protocol/**/*.ts",
+    "plugins/**/*.ts",
+    "deploy/runtime-runner/*.ts",
+    "scripts/*.ts"
+  ],
+  "exclude": ["**/dist/**", "**/node_modules/**", "**/*.test.ts"]
+}

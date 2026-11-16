@@ -15,13 +15,14 @@ WORKDIR /app
 # into image layers. Build from the push-channel package root.
 COPY admin-backend/src ./admin-backend/src
 COPY admin-backend/package.json ./admin-backend/package.json
-COPY protocol/index.cjs protocol/plugin.cjs ./protocol/
-COPY frontend-demo/index.html frontend-demo/sdk.js frontend-demo/mentions.js frontend-demo/style.css ./frontend-demo/
-COPY deploy/runtime-runner/bootstrap.cjs ./deploy/runtime-runner/bootstrap.cjs
+COPY protocol/index.ts protocol/plugin.ts ./protocol/
+COPY frontend-demo/index.html frontend-demo/sdk.ts frontend-demo/mentions.ts frontend-demo/demo.ts frontend-demo/build.ts frontend-demo/style.css ./frontend-demo/
+RUN node frontend-demo/build.ts
+COPY deploy/runtime-runner/bootstrap.ts ./deploy/runtime-runner/bootstrap.ts
 
 ENV HOST=0.0.0.0 PORT=3003
 EXPOSE 3003
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
   CMD node -e "fetch('http://127.0.0.1:3003/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
-ENTRYPOINT ["node", "/app/deploy/runtime-runner/bootstrap.cjs"]
+ENTRYPOINT ["node", "/app/deploy/runtime-runner/bootstrap.ts"]
 CMD ["--config", "/etc/push-gateway/gateway.json"]

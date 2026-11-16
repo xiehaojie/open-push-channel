@@ -43,10 +43,12 @@ Pi 配置文件的位置为 `<dataRoot>/pi/<agentId>/home/.pi/agent/models.json`
 
 同一 npm 包保留 OpenClaw 默认入口，dsh 只加载 `./dsh` 子入口。发布内容只包含宿主插件与共享传输协议，不包含网关、dsh/Pi 引擎、Demo 或其他底座依赖。独立网关仍从本项目 `admin-backend` 部署。
 
-先准备独立 dsh profile 和工作目录；由宿主部署设置这个智能体专用的 `DSH_HOME`、`DSH_AGENTS_HOME` 和绝对 `cwd`。plugin 模式不替你创建这些目录，也不继承网关托管 SDK 模式的 home。在仓库根目录将本地包加入独立 dsh profile，再把示例加入该 profile 的 `cordis.patch.yml`。
+先准备独立 dsh profile 和工作目录；由宿主部署设置这个智能体专用的 `DSH_HOME`、`DSH_AGENTS_HOME` 和绝对 `cwd`。plugin 模式不替你创建这些目录，也不继承网关托管 SDK 模式的 home。在仓库根目录构建插件包，再将生成的压缩包加入独立 dsh profile，再把示例加入该 profile 的 `cordis.patch.yml`。
 
 ```bash
-dsh plugin --profile push-channel add "$(pwd)"
+npm ci
+npm pack
+dsh plugin --profile push-channel add "$(pwd)/open-push-channel-0.2.0.tgz"
 ```
 
 ```yaml
