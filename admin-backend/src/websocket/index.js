@@ -242,12 +242,7 @@ function forwardMessage(socket, data, signal) {
 function publishPush({ agentId, sessionId, runtimeId, clientId, ...payload }) {
   const currentGateway = getGateway();
   const selectedSession = trimToNull(sessionId);
-  const addressed = selectedSession
-    ? [...currentGateway.sessions.values()].filter(
-        (item) =>
-          item.conversationId === selectedSession || item.nativeSessionId === selectedSession,
-      )
-    : [];
+  const addressed = selectedSession ? currentGateway.sessionsAt(selectedSession) : [];
   const candidates = addressed.filter(
     (item) =>
       (!clientId || item.clientId === clientId) &&

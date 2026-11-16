@@ -3,6 +3,8 @@ const { createEventWriter, validateAdapterSignal } = require("../../../protocol/
 const { GatewayStore } = require("./store");
 
 class PushGateway {
+  #sessionKeysByAddress = new Map();
+
   constructor({ adapters, publish, store = new GatewayStore() }) {
     this.adapters = new Map();
     for (const adapter of adapters) {
@@ -16,9 +18,10 @@ class PushGateway {
     this.deliver = publish;
     this.publish = (event) => publish(this.store.appendEvent(event));
     this.queues = new Map();
-    this.sessions = new Map(
-      this.store.sessions().map((session) => [this.sessionKey(session), session]),
-    );
+    this.sessions = new Map();
+    for (const session of this.store.sessions()) {
+      this.#registerSession(session);
+    }
     this.activeRuns = new Map();
   }
 
@@ -28,6 +31,26 @@ class PushGateway {
 
   session(clientId, conversationId) {
     return this.sessions.get(this.sessionKey({ clientId, conversationId }));
+  }
+
+  #registerSession(session) {
+    const key = this.sessionKey(session);
+    this.sessions.set(key, session);
+    for (const address of [session.conversationId, session.nativeSessionId]) {
+      let keys = this.#sessionKeysByAddress.get(address);
+      if (!keys) {
+        keys = new Set();
+        this.#sessionKeysByAddress.set(address, keys);
+      }
+      keys.add(key);
+    }
+  }
+
+  sessionsAt(address) {
+    // Address bindings are immutable. Keep keys so lookups see the latest
+    // session record after native admission replaces it in the primary map.
+    const keys = this.#sessionKeysByAddress.get(address);
+    return keys ? Array.from(keys, (key) => this.sessions.get(key)) : [];
   }
 
   catalog() {
@@ -74,7 +97,7 @@ class PushGateway {
       nativeStarted: false,
     };
     this.store.saveSession(session);
-    this.sessions.set(this.sessionKey(session), session);
+    this.#registerSession(session);
     return session;
   }
 

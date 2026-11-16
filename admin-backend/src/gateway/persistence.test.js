@@ -6,6 +6,7 @@ const path = require("node:path");
 const test = require("node:test");
 const WebSocket = require("ws");
 const { createGatewayServer } = require("./server");
+const { GatewayStore } = require("./store");
 const { createOpenClawAdapter } = require("../adapters/openclaw");
 
 async function launch(databasePath, run, otherAdapters = []) {
@@ -293,5 +294,64 @@ void test("equal conversation names isolate clients, native identities, replay a
         .length,
       1,
     );
+  }
+});
+
+void test("persisted native and conversation address collisions require a unique push target", async (t) => {
+  const directory = mkdtempSync(path.join(tmpdir(), "push-address-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const databasePath = path.join(directory, "gateway.sqlite");
+  const store = new GatewayStore({ path: databasePath });
+  try {
+    const binding = { runtimeId: "native", agentId: "assistant", nativeStarted: false };
+    store.saveSession({
+      ...binding,
+      clientId: "first",
+      conversationId: "chat",
+      nativeSessionId: "shared",
+    });
+    store.saveSession({
+      ...binding,
+      clientId: "second",
+      conversationId: "shared",
+      nativeSessionId: "shared",
+    });
+  } finally {
+    store.close();
+  }
+
+  const server = await launch(databasePath, async () => assert.fail("A push must not run an agent"));
+  t.after(() => server.close());
+  const first = await server.connect("first", "chat");
+  const second = await server.connect("second", "shared");
+  const sendPush = (target) =>
+    fetch(`${server.base}/api/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        agentId: "assistant",
+        sessionId: "shared",
+        content: "direct notification",
+        ...target,
+      }),
+    });
+  assert.equal((await sendPush({})).status, 404);
+  assert.equal((await sendPush({ clientId: "missing" })).status, 404);
+  const targets = [
+    ["first", first, "chat"],
+    ["second", second, "shared"],
+  ];
+  for (const [clientId] of targets) {
+    assert.equal((await sendPush({ clientId })).status, 200);
+  }
+  for (const [clientId, browser, conversationId] of targets) {
+    browser.send({ type: "ping" });
+    await browser.wait((event) => event.type === "pong");
+    const deliveries = browser.events.filter(
+      (event) => event.origin === "push" && event.type === "message.delta",
+    );
+    assert.deepEqual(deliveries.map((event) => [event.clientId, event.conversationId]), [
+      [clientId, conversationId],
+    ]);
   }
 });

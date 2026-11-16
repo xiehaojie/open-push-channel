@@ -6,15 +6,16 @@ const { tmpdir } = require("node:os");
 const { join } = require("node:path");
 const { performance } = require("node:perf_hooks");
 const { createGatewayServer } = require("../admin-backend/src/gateway/server");
+const { GatewayStore } = require("../admin-backend/src/gateway/store");
 
 const timeoutMs = 10_000;
 const runtimeId = "benchmark";
 const agentId = "main";
 
-function positiveInteger(value, label) {
+function integerAtLeast(value, label, minimum = 1) {
   const number = Number(value);
-  if (!Number.isSafeInteger(number) || number < 1) {
-    throw new Error(`${label} must be a positive integer`);
+  if (!Number.isSafeInteger(number) || number < minimum) {
+    throw new Error(`${label} must be an integer of at least ${minimum}`);
   }
   return number;
 }
@@ -52,7 +53,25 @@ function waitFor(socket, type) {
   });
 }
 
-async function benchmark(clientCount, rounds) {
+function seedHistory(databasePath, count) {
+  const store = new GatewayStore({ path: databasePath });
+  try {
+    for (let index = 0; index < count; index++) {
+      store.saveSession({
+        clientId: "offline-client",
+        conversationId: `historical-${index}`,
+        nativeSessionId: `native-historical-${index}`,
+        runtimeId,
+        agentId,
+        nativeStarted: false,
+      });
+    }
+  } finally {
+    store.close();
+  }
+}
+
+async function benchmark(clientCount, rounds, historicalSessions) {
   const directory = await mkdtemp(join(tmpdir(), "open-push-channel-benchmark-"));
   const pushToken = randomUUID();
   const clients = Array.from({ length: clientCount }, (_, index) => ({
@@ -62,8 +81,10 @@ async function benchmark(clientCount, rounds) {
   }));
   let server;
   try {
+    const databasePath = join(directory, "events.sqlite");
+    if (historicalSessions) seedHistory(databasePath, historicalSessions);
     server = createGatewayServer({
-      databasePath: join(directory, "events.sqlite"),
+      databasePath,
       auth: { clients, pushToken },
       adapters: [{
         id: runtimeId,
@@ -129,6 +150,7 @@ async function benchmark(clientCount, rounds) {
       platform: process.platform,
       arch: process.arch,
       clients: clientCount,
+      historicalSessions,
       rounds,
       deliveries: samples.length,
       deliveriesPerSecond: Number((samples.length / seconds).toFixed(2)),
@@ -142,8 +164,9 @@ async function benchmark(clientCount, rounds) {
 
 Promise.resolve()
   .then(() => benchmark(
-    positiveInteger(process.argv[2] ?? "25", "clients"),
-    positiveInteger(process.argv[3] ?? "10", "rounds"),
+    integerAtLeast(process.argv[2] ?? "25", "clients"),
+    integerAtLeast(process.argv[3] ?? "10", "rounds"),
+    integerAtLeast(process.argv[4] ?? "0", "historical sessions", 0),
   ))
   .catch((error) => {
     console.error(error.message);

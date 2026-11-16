@@ -45,11 +45,12 @@ node --test frontend-demo/sdk.test.js
 
 ```bash
 node scripts/benchmark-push.cjs 100 20
+node scripts/benchmark-push.cjs 50 20 20000
 ```
 
-参数分别是 WebSocket 连接数和测量轮数，默认 25 和 10。脚本启动一个隔离的本机网关，使用临时 SQLite 文件。每个连接以独立客户端身份注册、创建会话，预热一轮后，每轮并发调用 `POST /api/send`，并核对收到通知的会话和正文。输出每秒成功投递数，以及从发起 HTTP 请求到收到 WebSocket 正文事件的 p50、p95、p99 延迟。失败或超时会返回非零退出码。
+参数分别是 WebSocket 连接数、测量轮数和预置的离线会话数，默认 25、10 和 0。脚本启动一个隔离的本机网关，使用临时 SQLite 文件。每个连接以独立客户端身份注册、创建会话，预热一轮后，每轮并发调用 `POST /api/send`，并核对收到通知的会话和正文。输出每秒成功投递数，以及从发起 HTTP 请求到收到 WebSocket 正文事件的 p50、p95、p99 延迟。失败或超时会返回非零退出码。
 
-此基准测量本机同进程负载下的通知链路。连接、注册和会话创建在计时前完成。比较两次结果请使用相同机器、Node 版本和参数。模型推理、远程网络、断线重放和生产容量需要另行验证。基准的可配置负载及百分位报告参考 [Grafana k6 v1.0.0](https://github.com/grafana/k6/blob/v1.0.0/README.md)，脚本使用 Node.js 内置客户端。
+此基准测量本机同进程负载下的通知链路。离线会话预置、连接、注册和会话创建在计时前完成。比较两次结果请使用相同机器、Node 版本和参数。模型推理、远程网络、断线重放和生产容量需要另行验证。基准的可配置负载及百分位报告参考 [Grafana k6 v1.0.0](https://github.com/grafana/k6/blob/v1.0.0/README.md)，脚本使用 Node.js 内置客户端。
 
 ## 接入新底座
 
