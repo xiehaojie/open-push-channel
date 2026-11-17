@@ -4,7 +4,7 @@ Open Push Channel 网关可作为独立 WebSocket 服务运行。业务页面用
 
 以工单系统为例。工单页创建一个绑定到实际智能体的会话，用户在页面发送问题。业务后端在收到状态变更事件后，用工单会话 ID 发起摘要任务，页面通过同一条 WebSocket 接收运行事件。若后端已生成摘要，可以直接推送结果。
 
-Go 后端可直接运行[标准库示例](../examples/go-backend/README.md)，用同一套 HTTP 接口启动任务或投递通知。
+Go 后端可直接运行[标准库示例](../examples/go-backend/README.md)，用同一套 HTTP 接口启动任务或投递通知。 Python 应用可使用[事件订阅示例](../examples/python-events/README.md)，监听单个会话并从保存的游标回放。
 
 ## 为业务系统配置认证
 
