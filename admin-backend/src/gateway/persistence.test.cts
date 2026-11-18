@@ -20,7 +20,7 @@ async function launch(databasePath, run, otherAdapters = []) {
   const sockets = [];
   return {
     base,
-    async connect(clientId, sessionId) {
+    async connect(clientId, sessionId, { legacy = false } = {}) {
       const socket = new WebSocket(base.replace("http:", "ws:"));
       sockets.push(socket);
       const events = [];
@@ -42,7 +42,12 @@ async function launch(databasePath, run, otherAdapters = []) {
         }
         return events.find(predicate);
       };
-      send({ type: "register", agentId: clientId ?? "owner", protocolVersion: 1, sessionId });
+      send({
+        type: "register",
+        agentId: clientId ?? "owner",
+        protocolVersion: legacy ? undefined : 1,
+        sessionId,
+      });
       await wait((event) => event.type === "registered");
       return { socket, send, wait, events };
     },
@@ -354,4 +359,66 @@ void test("persisted native and conversation address collisions require a unique
       [clientId, conversationId],
     ]);
   }
+});
+
+void test("cursor replay includes the boundary and preserves legacy stream state", async (t) => {
+  const directory = mkdtempSync(path.join(tmpdir(), "push-replay-cursor-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const databasePath = path.join(directory, "gateway.sqlite");
+  const target = { clientId: "owner", conversationId: "chat", runtimeId: "native", agentId: "assistant" };
+  const store = new GatewayStore({ path: databasePath });
+  let boundary;
+  let terminal;
+  try {
+    store.saveSession({ ...target, nativeSessionId: "native-chat", nativeStarted: true });
+    let seq = 0;
+    const append = (type, data, extra = {}) =>
+      store.appendEvent({
+        ...target,
+        version: 1,
+        eventId: `event-${++seq}`,
+        runId: "run",
+        replyId: "answer",
+        origin: "prompt",
+        audience: "conversation",
+        seq,
+        timestamp: Date.now(),
+        type,
+        data,
+        ...extra,
+      });
+    append("run.started", {});
+    append("message.started", { messageId: "part" });
+    boundary = append("message.delta", { messageId: "part", delta: "resumed" });
+    append(
+      "message.delta",
+      { messageId: "feed", delta: "agent feed" },
+      { audience: "agent", origin: "push", runId: "feed" },
+    );
+    terminal = append("run.completed", {});
+  } finally {
+    store.close();
+  }
+
+  const server = await launch(databasePath, async () => assert.fail("Replay must not run an agent"));
+  t.after(() => server.close());
+  const subscribe = async (legacy) => {
+    const browser = await server.connect("owner", undefined, { legacy });
+    browser.send({ type: "session.start", sessionId: "chat", afterCursor: boundary.cursor });
+    browser.send({ type: "ping" });
+    await browser.wait((event) => event.type === "pong");
+    return browser.events.filter((event) => event.cursor !== undefined);
+  };
+  assert.deepEqual(await subscribe(false), [boundary, terminal]);
+  const legacy = await subscribe(true);
+  assert.deepEqual(
+    legacy.map(({ type, cursor, answerMessageId, deliveryId }) => [
+      type, cursor, answerMessageId, deliveryId,
+    ]),
+    [
+      ["stream", boundary.cursor, "answer-1", `${boundary.eventId}:0`],
+      ["stream_end", terminal.cursor, "answer-1", `${terminal.eventId}:0`],
+      ["run_completed", terminal.cursor, "answer-1", `${terminal.eventId}:1`],
+    ],
+  );
 });

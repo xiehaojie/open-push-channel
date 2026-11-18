@@ -206,10 +206,12 @@ function replay(socket: GatewaySocket, session: GatewaySession, afterCursor: unk
   if (!authorized) {
     return;
   }
-  const folds = new Map<string, Projector>();
-  // Rebuild presentation state from the canonical journal, then resend the last
-  // cursor inclusively so a disconnect cannot lose sibling legacy projections.
-  for (const event of gateway.store.events(session.clientId, session.conversationId)) {
+  const canonical = socket.protocolVersion === PROTOCOL_VERSION;
+  const folds = canonical ? undefined : new Map<string, Projector>();
+  // The store uses an exclusive lower bound, while wire replay includes the
+  // supplied cursor. Legacy projection needs the prefix to rebuild stream state.
+  const lowerBound = canonical ? Math.max(0, afterCursor - 1) : 0;
+  for (const event of gateway.store.events(session.clientId, session.conversationId, lowerBound)) {
     // Agent-wide feeds and old unbound routes may share a literal conversation
     // name, but never its binding or replay authorization. Filter before folding.
     if (
@@ -217,6 +219,10 @@ function replay(socket: GatewaySocket, session: GatewaySession, afterCursor: unk
       event.runtimeId !== session.runtimeId ||
       event.agentId !== session.agentId
     ) {
+      continue;
+    }
+    if (!folds) {
+      sendJson(socket, event);
       continue;
     }
     let fold = folds.get(event.runId);
@@ -231,18 +237,14 @@ function replay(socket: GatewaySocket, session: GatewaySession, afterCursor: unk
     if (event.cursor < afterCursor) {
       continue;
     }
-    if (socket.protocolVersion === PROTOCOL_VERSION) {
-      sendJson(socket, event);
-    } else {
-      messages.forEach((payload, index) =>
-        sendJson(socket, {
-          ...payload,
-          eventId: event.eventId,
-          cursor: event.cursor,
-          deliveryId: `${event.eventId}:${index}`,
-        }),
-      );
-    }
+    messages.forEach((payload, index) =>
+      sendJson(socket, {
+        ...payload,
+        eventId: event.eventId,
+        cursor: event.cursor,
+        deliveryId: `${event.eventId}:${index}`,
+      }),
+    );
   }
 }
 
