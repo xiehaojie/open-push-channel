@@ -24,3 +24,13 @@ python examples/python-events/listen.py --session quickstart --after-cursor 42
 The gateway replays the saved cursor inclusively, so the listener skips that boundary event before printing newer ones. Omit `--after-cursor` for a complete replay. Use `--count N` to exit after N events, or Ctrl-C to stop. The example leaves checkpoint storage and reconnect policy to the caller.
 
 The cursor pattern draws on [Centrifuge's Python client](https://github.com/centrifugal/centrifuge-python/blob/8b9e7d3756a159ba0886fe9332a35f76145780eb/centrifuge/client.py). The request fields and replay boundaries follow the [Open Push Channel protocol](../../docs/protocol.md#断线重启与去重).
+
+## Verify the example
+
+With the Python environment above activated and the gateway dependencies installed, run this integration test from the repository root:
+
+```sh
+PYTHON=python node --test examples/python-events/listen.test.cts
+```
+
+The test launches the CLI against a temporary, authenticated gateway with SQLite. It verifies notification delivery, offline replay, skipping the inclusive boundary, complete replay and rejected credentials. CI runs this scenario on Python 3.11.
