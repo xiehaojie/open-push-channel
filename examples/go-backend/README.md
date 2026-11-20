@@ -23,3 +23,17 @@ With `send`, HTTP 200 means the gateway accepted the notification. With `task`, 
 Use `-gateway` to pass a trusted gateway base URL and use HTTPS when calling across networks. Keep the server token on the backend. In your own application, verify the caller's permission to act on the target conversation before sending a notification or task. See the [integration guide](../../docs/integration.md) for auth and replay semantics.
 
 The server-side example follows the approach used in [Centrifugo's Go SDK v4.0.0](https://github.com/centrifugal/gocent/tree/v4.0.0#example), with bounded HTTP calls and caller-owned idempotency keys.
+
+## Run the integration check
+
+With Node.js 24 and Go installed, run from the repository root:
+
+```sh
+npm --prefix admin-backend ci
+go vet examples/go-backend/main.go
+node --test examples/go-backend/main.test.cts
+```
+
+The check builds the CLI and starts a local authenticated gateway with a temporary SQLite database and a fixture agent. It verifies WebSocket notification delivery, task results, retries without duplicate execution, HTTP 400/401/404 errors, and refusal to follow HTTP redirects. It requires no model credentials and removes its temporary files afterward. CI runs it separately on Go 1.19, the example's minimum supported version; the main Node.js test suite does not require Go.
+
+The redirect regression follows the behavior checked by [gocent v4.0.0's redirect test](https://github.com/centrifugal/gocent/blob/v4.0.0/client_test.go#L765-L813). gocent is a reference, not a dependency.

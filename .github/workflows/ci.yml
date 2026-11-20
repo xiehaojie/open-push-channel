@@ -82,6 +82,24 @@ jobs:
         env:
           PYTHON: python
 
+  go-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+        with:
+          go-version: "1.19.x"
+          cache: false
+      - run: npm --prefix admin-backend ci
+      - run: go vet examples/go-backend/main.go
+      - run: node --test examples/go-backend/main.test.cts
+
   openclaw-plugin:
     runs-on: ubuntu-latest
     timeout-minutes: 15
