@@ -78,7 +78,7 @@ jobs:
           python-version: "3.11"
       - run: npm --prefix admin-backend ci
       - run: python -m pip install -r examples/python-events/requirements.txt
-      - run: node --test examples/python-events/listen.test.cts
+      - run: node --test examples/python-events/listen.test.cts examples/python-backend/send.test.cts
         env:
           PYTHON: python
 
