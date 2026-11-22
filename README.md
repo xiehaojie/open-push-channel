@@ -78,4 +78,4 @@ Update the agent ID in the Demo and notification request if you changed the samp
 
 See [runtime setup](docs/runtimes.md) for version and configuration details. One gateway process can handle multiple clients and conversations. Runs within the same conversation are processed in order. Use one gateway process per SQLite file.
 
-[Protocol reference](docs/protocol.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [MIT license](LICENSE)
+[Protocol reference](docs/protocol.md) · [Benchmark guide](docs/benchmark.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [MIT license](LICENSE)

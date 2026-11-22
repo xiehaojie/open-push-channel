@@ -30,6 +30,7 @@ jobs:
       - run: npm --prefix admin-backend ci
       - run: npm run typecheck
       - run: npm test
+      - run: node --test scripts/benchmark-push.test.cts
       - name: Pack and install the plugin
         shell: bash
         run: |
