@@ -113,8 +113,13 @@ void test("Go backend delivers notifications and tasks without duplicate executi
   assert.equal(calls, 1);
 
   let redirected = 0;
+  let receiptBody;
   redirect = createServer((request, response) => {
-    if (request.url === "/api/send") {
+    if (request.url === "/api/tasks") {
+      response.writeHead(202, { "Content-Type": "application/json" });
+      response.end(receiptBody);
+      return;
+    } else if (request.url === "/api/send") {
       response.writeHead(307, { Location: "/capture" });
     } else {
       redirected += 1;
@@ -128,4 +133,29 @@ void test("Go backend delivers notifications and tasks without duplicate executi
     gateway: `http://127.0.0.1:${redirect.address().port}`,
   }), /HTTP 307/);
   assert.equal(redirected, 0);
+
+  const valid = { runId: "run", duplicate: false, status: "accepted" };
+  for (const [name, body] of [
+    ["missing duplicate", '{"runId":"run","status":"accepted"}'],
+    ["null duplicate", JSON.stringify({ ...valid, duplicate: null })],
+    ["wrong duplicate type", JSON.stringify({ ...valid, duplicate: "false" })],
+    ["blank runId", JSON.stringify({ ...valid, runId: " \t" })],
+    ["blank status", JSON.stringify({ ...valid, status: " \n" })],
+    ["array", JSON.stringify([valid])],
+    ["null", "null"],
+    ["multiple objects", JSON.stringify(valid) + " {}"],
+    ["trailing junk", JSON.stringify(valid) + " junk"],
+  ]) await t.test(name, async () => {
+    receiptBody = body;
+    await assert.rejects(invoke("task", "receipt", "notice", {
+      gateway: `http://127.0.0.1:${redirect.address().port}`,
+    }), (error) => error.code !== 0 && /task receipt/.test(error.stderr) && error.stdout === "");
+  });
+  for (const duplicate of [false, true]) await t.test(`explicit duplicate ${duplicate}`, async () => {
+    receiptBody = JSON.stringify({ ...valid, duplicate, futureField: "allowed" }) + " \n\t";
+    const result = await invoke("task", "receipt", "notice", {
+      gateway: `http://127.0.0.1:${redirect.address().port}`,
+    });
+    assert.deepEqual(JSON.parse(result.stdout), { ...valid, duplicate });
+  });
 });

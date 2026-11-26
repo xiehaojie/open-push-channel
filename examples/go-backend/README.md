@@ -18,7 +18,7 @@ go run examples/go-backend/main.go -mode task \
   -event quickstart-go-summary-v1 -content 'Summarize this conversation.'
 ```
 
-With `send`, HTTP 200 means the gateway accepted the notification. With `task`, HTTP 202 means the gateway accepted or already knows the task. Use the returned `runId` to follow execution over WebSocket. If a request times out, reuse the same event ID, target and content when retrying the same operation. The example returns errors without automatically retrying. If you see HTTP 401, check the server token. If you see HTTP 404, check that the session exists for the specified client, runtime and agent.
+With `send`, HTTP 200 means the gateway accepted the notification. With `task`, HTTP 202 is accepted only with a single valid JSON object containing nonblank string `runId` and `status` fields and an explicit boolean `duplicate` field. Trailing whitespace and additional fields are allowed. Use the returned `runId` to follow execution over WebSocket. If a request times out, reuse the same event ID, target and content when retrying the same operation. The example returns errors without automatically retrying, including malformed receipts. If you see HTTP 401, check the server token. If you see HTTP 404, check that the session exists for the specified client, runtime and agent.
 
 Use `-gateway` to pass a trusted gateway base URL and use HTTPS when calling across networks. Keep the server token on the backend. In your own application, verify the caller's permission to act on the target conversation before sending a notification or task. See the [integration guide](../../docs/integration.md) for auth and replay semantics.
 
@@ -34,6 +34,8 @@ go vet examples/go-backend/main.go
 node --test examples/go-backend/main.test.cts
 ```
 
-The check builds the CLI and starts a local authenticated gateway with a temporary SQLite database and a fixture agent. It verifies WebSocket notification delivery, task results, retries without duplicate execution, HTTP 400/401/404 errors, and refusal to follow HTTP redirects. It requires no model credentials and removes its temporary files afterward. CI runs it separately on Go 1.19, the example's minimum supported version; the main Node.js test suite does not require Go.
+The check builds the CLI and starts a local authenticated gateway with a temporary SQLite database and a fixture agent. It verifies WebSocket notification delivery, task results, retries without duplicate execution, HTTP 400/401/404 errors, refusal to follow HTTP redirects, and rejection of malformed HTTP 202 receipts. It requires no model credentials and removes its temporary files afterward. CI runs it separately on Go 1.19, the example's minimum supported version; the main Node.js test suite does not require Go.
 
 The redirect regression follows the behavior checked by [gocent v4.0.0's redirect test](https://github.com/centrifugal/gocent/blob/v4.0.0/client_test.go#L765-L813). gocent is a reference, not a dependency.
+
+Receipt validation uses the standard library's [Go 1.19 JSON unmarshaling contract](https://github.com/golang/go/blob/go1.19.13/src/encoding/json/decode.go#L23-L107): the complete response must be valid JSON, and a pointer preserves the distinction between an explicit boolean and a missing or null field.

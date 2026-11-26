@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -23,8 +24,9 @@ type request struct {
 }
 
 type taskReceipt struct {
-	RunID     string `json:"runId"`
-	Duplicate bool   `json:"duplicate"`
+	RunID string `json:"runId"`
+	// A pointer distinguishes explicit false from a missing or null required field.
+	Duplicate *bool  `json:"duplicate"`
 	Status    string `json:"status"`
 }
 
@@ -94,12 +96,16 @@ func run() error {
 		return nil
 	}
 
+	receiptBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read task receipt: %w", err)
+	}
 	var receipt taskReceipt
-	if err := json.NewDecoder(resp.Body).Decode(&receipt); err != nil {
+	if err := json.Unmarshal(receiptBody, &receipt); err != nil {
 		return fmt.Errorf("decode task receipt: %w", err)
 	}
-	if receipt.RunID == "" || receipt.Status == "" {
-		return fmt.Errorf("task receipt is missing runId or status")
+	if strings.TrimSpace(receipt.RunID) == "" || strings.TrimSpace(receipt.Status) == "" || receipt.Duplicate == nil {
+		return fmt.Errorf("task receipt requires nonblank runId and status and a boolean duplicate")
 	}
 	return json.NewEncoder(os.Stdout).Encode(receipt)
 }
