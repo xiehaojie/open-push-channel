@@ -82,6 +82,23 @@ void test("Python backend delivers notifications and tasks without duplicate exe
     killSignal: "SIGKILL",
   });
 
+  const embedded = async (overrides = {}, serverToken = pushToken) => JSON.parse((await execute(
+    process.env.PYTHON ?? "python3", ["-c", [
+      "import json, os, sys",
+      "from send import send_request",
+      "try:",
+      "    result = send_request(token=os.environ['PUSH_CHANNEL_PUSH_TOKEN'], **json.loads(sys.argv[1]))",
+      "except (ValueError, RuntimeError) as error:",
+      "    print(json.dumps({'error': type(error).__name__, 'message': str(error)}))",
+      "else:",
+      "    print(json.dumps(result))",
+    ].join("\n"), JSON.stringify({
+      gateway, mode: "send", client: "demo", session: "quickstart", agent: "main",
+      event: "embedded-notice", content: "Embedded notification 🌏", ...overrides,
+    })],
+    { cwd: __dirname, env: { ...process.env, PUSH_CHANNEL_PUSH_TOKEN: serverToken, PYTHONDONTWRITEBYTECODE: "1" }, timeout: 15000, killSignal: "SIGKILL" },
+  )).stdout);
+
   assert.match((await invoke("send", "notice", "工单已处理 🌏")).stdout, /Notification accepted/);
   await wait((event) => event.type === "run.completed" && event.origin === "push");
   await invoke("send", "notice", "工单已处理 🌏");
@@ -111,6 +128,32 @@ void test("Python backend delivers notifications and tasks without duplicate exe
   await assert.rejects(invoke("send", "missing", "notice", { session: "missing" }), /HTTP 404/);
   assert.equal(calls, 1);
 
+  assert.equal(await embedded(), null);
+  const task = await embedded({ mode: "task", event: "embedded-task", content: "Embedded task 🌏" });
+  assert.equal(typeof task.runId, "string");
+  assert.equal(typeof task.status, "string");
+  assert.equal(task.duplicate, false);
+  await wait((event) => event.type === "run.completed" && event.runId === task.runId);
+  assert.equal(events.find((event) => event.type === "message.snapshot" && event.runId === task.runId).data.text, "Embedded task 🌏");
+  assert.equal(events.filter((event) => event.type === "message.delta" && event.origin === "push").at(-1).data.delta, "Embedded notification 🌏");
+  assert.equal(await embedded(), null);
+  assert.deepEqual(await embedded({ mode: "task", event: "embedded-task", content: "Embedded task 🌏" }), { ...task, duplicate: true, status: "completed" });
+  // Pong arrives after earlier notification frames, including any erroneous retry delivery.
+  const pongs = events.filter((event) => event.type === "pong").length;
+  socket.send(JSON.stringify({ type: "ping" }));
+  await wait((event) => event.type === "pong" && events.filter((item) => item.type === "pong").length > pongs);
+  assert.equal(calls, 2);
+  assert.equal(events.filter((event) => event.type === "message.delta" && event.origin === "push").length, 2);
+  for (const invalid of [{ content: " " }, { client: null }, { session: 1 }, { agent: [] }, { event: {} }, { runtime: false }, { gateway: null }, { mode: "invalid" }]) {
+    assert.equal((await embedded(invalid)).error, "ValueError");
+  }
+  for (const [overrides, serverToken, status] of [[{}, "invalid-token", 401], [{ session: "missing" }, pushToken, 404]]) {
+    const failure = await embedded(overrides, serverToken);
+    assert.equal(failure.error, "RuntimeError");
+    assert.match(failure.message, new RegExp(`HTTP ${status}`));
+    assert.ok(!failure.message.includes(serverToken));
+  }
+
   let redirected = 0;
   let redirectStatus = 301;
   let taskBody = "{}";
@@ -138,6 +181,8 @@ void test("Python backend delivers notifications and tasks without duplicate exe
     taskBody = body;
     await assert.rejects(invoke("task", "invalid-receipt", "notice", { gateway: fixture }), /invalid JSON|Invalid task receipt/);
   }
+  assert.equal((await embedded({ gateway: fixture })).error, "RuntimeError");
+  assert.equal((await embedded({ gateway: fixture, mode: "task" })).error, "RuntimeError");
   assert.equal(redirected, 0);
   await assert.rejects(invoke("send", "invalid", " "), /must be nonempty/);
   await assert.rejects(invoke("send", "invalid", "notice", { token: "" }), /valid gateway server token/);
